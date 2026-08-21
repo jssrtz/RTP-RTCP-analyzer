@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manual — RTP/RTCP/SIP Voice Quality Analyzer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --chassis:#EFEDE4;
+    --chassis-edge:#DBD8CB;
+    --ink:#20241E;
+    --ink-soft:#54574C;
+    --screen:#12160F;
+    --good:#2F8F5B;
+    --warn:#C97F2A;
+    --bad:#B3392E;
+    --copper:#A15C2A;
+    --purple:#6B42A1;
+    --blue:#2E76B6;
+    --paper:#FBFAF5;
+    --shadow: rgba(32,36,30,0.14);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--chassis);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    line-height:1.6;
+  }
+  a{color:var(--blue); text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  code{background:var(--chassis); padding:1.5px 6px; border-radius:4px; font-family:'IBM Plex Mono',monospace; font-size:.92em; color:var(--copper);}
+  pre{background:var(--screen); color:#EAF3E4; padding:14px 16px; border-radius:8px; overflow-x:auto; font-family:'IBM Plex Mono',monospace; font-size:12.5px; line-height:1.55;}
+  pre code{background:none; color:inherit; padding:0;}
+
+  /* ---------- LAYOUT ---------- */
+  .app{display:flex; max-width:1360px; margin:0 auto;}
+  .sidebar{
+    width:280px; flex:0 0 280px; position:sticky; top:0; align-self:flex-start;
+    height:100vh; overflow-y:auto; padding:28px 18px 40px 24px; border-right:1px solid var(--chassis-edge);
+  }
+  .sidebar-brand{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:16px; margin-bottom:2px;}
+  .sidebar-sub{font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--ink-soft); letter-spacing:.05em; text-transform:uppercase; margin-bottom:22px;}
+  .toc{list-style:none; margin:0; padding:0;}
+  .toc li{margin-bottom:2px;}
+  .toc a{
+    display:block; padding:6px 10px; border-radius:6px; font-size:13px; color:var(--ink-soft);
+  }
+  .toc a:hover{background:var(--paper); text-decoration:none; color:var(--ink);}
+  .toc .sub{padding-left:22px; font-size:12px;}
+  .toc .h2-item a{font-weight:600; color:var(--ink); margin-top:10px;}
+
+  main{flex:1; min-width:0; padding:40px 56px 100px;}
+  .doc-header{margin-bottom:44px;}
+  .eyebrow{font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--copper); font-weight:600; margin:0 0 8px;}
+  h1.title{font-family:'Space Grotesk',sans-serif; font-size:34px; margin:0 0 10px; letter-spacing:-.01em;}
+  .doc-header p.lead{font-size:15.5px; color:var(--ink-soft); max-width:720px; margin:0;}
+
+  section{margin-bottom:56px; padding-top:8px;}
+  section h2{
+    font-family:'Space Grotesk',sans-serif; font-size:23px; margin:0 0 6px; padding-bottom:10px;
+    border-bottom:2px solid var(--ink); display:inline-block;
+  }
+  .section-num{color:var(--copper); font-family:'IBM Plex Mono',monospace; font-weight:600; margin-right:8px;}
+  section h3{font-family:'Space Grotesk',sans-serif; font-size:17px; margin:28px 0 10px;}
+  section h4{font-family:'IBM Plex Mono',monospace; font-size:12.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); margin:20px 0 8px;}
+  p{margin:0 0 14px;}
+  ul, ol{margin:0 0 14px; padding-left:22px;}
+  li{margin-bottom:6px;}
+
+  /* ---------- CALLOUTS ---------- */
+  .callout{border-radius:8px; padding:14px 16px; margin:16px 0; font-size:13.5px; border-left:4px solid;}
+  .callout.tip{background:rgba(47,143,91,.07); border-color:var(--good);}
+  .callout.warn{background:rgba(201,127,42,.09); border-color:var(--warn);}
+  .callout.info{background:rgba(46,118,182,.07); border-color:var(--blue);}
+  .callout.rtcp{background:rgba(107,66,161,.07); border-color:var(--purple);}
+  .callout strong.label{display:block; font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; margin-bottom:5px;}
+  .callout.tip strong.label{color:var(--good);}
+  .callout.warn strong.label{color:var(--warn);}
+  .callout.info strong.label{color:var(--blue);}
+  .callout.rtcp strong.label{color:var(--purple);}
+
+  /* ---------- TABLES ---------- */
+  table.ref{width:100%; border-collapse:collapse; margin:14px 0 22px; font-size:13px;}
+  table.ref th{text-align:left; background:var(--paper); border:1px solid var(--chassis-edge); padding:8px 10px; font-family:'IBM Plex Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:.03em; color:var(--ink-soft);}
+  table.ref td{border:1px solid var(--chassis-edge); padding:8px 10px; vertical-align:top;}
+  table.ref td code{white-space:nowrap;}
+  table.ref tr:nth-child(even) td{background:#FCFBF8;}
+
+  /* ---------- SOURCE TAGS (mimic app) ---------- */
+  .tag{display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:9.5px; font-weight:600; padding:2px 8px; border-radius:10px; letter-spacing:.03em; vertical-align:middle;}
+  .tag.rtp{background:rgba(46,118,182,.13); color:var(--blue);}
+  .tag.rtcp{background:rgba(107,66,161,.14); color:var(--purple);}
+  .tag.sip{background:rgba(161,92,42,.15); color:var(--copper);}
+
+  /* ---------- MINI GAUGE MOCKUP (illustrative only) ---------- */
+  .gauge-demo{display:inline-block; background:var(--screen); border-radius:8px; padding:10px 14px; min-width:150px; margin:4px 8px 4px 0; vertical-align:top;}
+  .gauge-demo .gl{font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:#8C9686; text-transform:uppercase;}
+  .gauge-demo .gv{font-family:'Space Grotesk',sans-serif; font-size:19px; color:#EAF3E4; font-weight:700; margin-top:3px;}
+  .gauge-demo .gv span{font-family:'IBM Plex Mono',monospace; font-size:10px; color:#8C9686; font-weight:400;}
+
+  .chip{display:inline-block; padding:1px 8px; border-radius:4px; font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:12px;}
+  .chip.good{color:var(--good); background:rgba(47,143,91,.14);}
+  .chip.warn{color:var(--warn); background:rgba(201,127,42,.16);}
+  .chip.bad{color:var(--bad); background:rgba(179,57,46,.14);}
+
+  .kbd{display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:11.5px; background:#fff; border:1px solid var(--chassis-edge); border-bottom-width:2px; border-radius:5px; padding:2px 8px; box-shadow:0 1px 0 rgba(0,0,0,.04);}
+
+  .flow-diagram{font-family:'IBM Plex Mono',monospace; font-size:12.5px; background:var(--paper); border:1px solid var(--chassis-edge); border-radius:8px; padding:16px 18px; margin:16px 0;}
+  .flow-step{padding:3px 0;}
+  .flow-arrow{color:var(--ink-soft);}
+
+  .toc-back{position:fixed; bottom:22px; right:26px; background:var(--ink); color:var(--paper); font-family:'IBM Plex Mono',monospace; font-size:11px; padding:8px 14px; border-radius:20px; box-shadow:0 4px 14px rgba(0,0,0,.2); cursor:pointer; opacity:.85;}
+  .toc-back:hover{opacity:1; text-decoration:none;}
+
+  footer{border-top:1px solid var(--chassis-edge); padding:26px 56px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--ink-soft); text-align:center;}
+
+  @media (max-width: 900px){
+    .sidebar{display:none;}
+    main{padding:28px 20px 80px;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <nav class="sidebar">
+    <p class="sidebar-brand">📞 User Manual</p>
+    <p class="sidebar-sub">RTP / RTCP / SIP Analyzer</p>
+    <ul class="toc">
+      <li class="h2-item"><a href="#intro">Introduction</a></li>
+      <li class="h2-item"><a href="#s1">1. Loading a Trace</a></li>
+      <li class="sub"><a href="#s1-1">1.1 Supported formats</a></li>
+      <li class="sub"><a href="#s1-2">1.2 UDP port range</a></li>
+      <li class="sub"><a href="#s1-3">1.3 Sample trace</a></li>
+      <li class="sub"><a href="#s1-4">1.4 Status messages</a></li>
+
+      <li class="h2-item"><a href="#s2">2. What the Engine Does Internally</a></li>
+      <li class="sub"><a href="#s2-1">2.1 Reading the container</a></li>
+      <li class="sub"><a href="#s2-2">2.2 From Ethernet to UDP</a></li>
+      <li class="sub"><a href="#s2-3">2.3 RTP vs RTCP</a></li>
+      <li class="sub"><a href="#s2-4">2.4 Grouping into flows</a></li>
+      <li class="sub"><a href="#s2-5">2.5 SIP signaling and SDP</a></li>
+      <li class="sub"><a href="#s2-6">2.6 Clock rate</a></li>
+
+      <li class="h2-item"><a href="#s3">3. The "SIP Signaling" Section</a></li>
+      <li class="h2-item"><a href="#s4">4. Detected Calls Table</a></li>
+      <li class="sub"><a href="#s4-1">4.1 Table columns</a></li>
+      <li class="sub"><a href="#s4-2">4.2 Call N-Flow X labels</a></li>
+      <li class="sub"><a href="#s4-3">4.3 Filters</a></li>
+
+      <li class="h2-item"><a href="#s5">5. Flow Detail View</a></li>
+      <li class="sub"><a href="#s5-1">5.1 RTP gauges</a></li>
+      <li class="sub"><a href="#s5-2">5.2 Flow clock rate</a></li>
+      <li class="sub"><a href="#s5-3">5.3 RTCP summary</a></li>
+      <li class="sub"><a href="#s5-4">5.4 RTCP gauges</a></li>
+      <li class="sub"><a href="#s5-5">5.5 RTP charts</a></li>
+      <li class="sub"><a href="#s5-6">5.6 RTCP charts</a></li>
+      <li class="sub"><a href="#s5-7">5.7 Capture artifacts</a></li>
+      <li class="sub"><a href="#s5-8">5.8 Anomaly log</a></li>
+
+      <li class="h2-item"><a href="#s6">6. "RTCP Only" Flows</a></li>
+      <li class="h2-item"><a href="#s7">7. Exporting Results</a></li>
+      <li class="sub"><a href="#s7-1">7.1 Export CSV</a></li>
+      <li class="sub"><a href="#s7-2">7.2 Export HTML report</a></li>
+
+      <li class="h2-item"><a href="#s8">8. Methodology and Formulas</a></li>
+      <li class="h2-item"><a href="#s9">9. Known Limitations</a></li>
+      <li class="h2-item"><a href="#s10">10. Frequently Asked Questions</a></li>
+    </ul>
+  </nav>
+
+  <main>
+
+    <div class="doc-header" id="intro">
+      <p class="eyebrow">Technical Documentation · v1</p>
+      <h1 class="title">RTP / RTCP / SIP Voice Quality Analyzer</h1>
+      <p class="lead">A self-contained web app (a single HTML file, no server) that analyzes <code>.pcap</code>/<code>.pcapng</code> traces of voice-over-IP calls: it decodes RTP and RTCP directly from the captured packets, correlates SIP signaling when present, and calculates jitter, loss, bandwidth, clock drift, and an estimated MOS — all running in your own browser, with the trace never leaving your machine.</p>
+    </div>
+
+    <section id="s1">
+      <h2><span class="section-num">1</span>Loading a Trace</h2>
+      <p>When you open the app you'll see a top panel with a file picker, two port fields, and several buttons. No prior setup is needed: just pick the file and click <span class="kbd">▶ Analyze trace</span>.</p>
+
+      <h3 id="s1-1">1.1 Supported formats</h3>
+      <p>The parsing engine implements its own binary reader (no external libraries) compatible with:</p>
+      <ul>
+        <li><strong>Classic pcap</strong> (the "traditional" tcpdump/Wireshark format) — all four possible magic numbers are detected automatically (microsecond or nanosecond resolution, in either byte order).</li>
+        <li><strong>pcapng</strong> (the default format in modern Wireshark versions) — Section Header, Interface Description, and Enhanced Packet Block blocks are all processed, including the timestamp resolution declared by each interface.</li>
+      </ul>
+      <p>At the link layer, <strong>Ethernet</strong> frames (with or without 802.1Q VLAN tags), <strong>Linux cooked capture (SLL)</strong> — typical of captures made with <code>tcpdump -i any</code> — and <strong>raw IP</strong> are all recognized. Above that, <strong>IPv4 + UDP</strong> is processed (RTP, RTCP, and also SIP) as well as <strong>IPv4 + TCP</strong> (SIP signaling only, see <a href="#s2-5">2.5</a>); IPv6 isn't decoded.</p>
+
+      <h3 id="s1-2">1.2 UDP port range</h3>
+      <p>Since a pcap can contain traffic from many different things at once, you need to tell the app which UDP port range corresponds to the media (RTP/RTCP) of the call you want to analyze — for example <code>10000</code> to <code>20000</code>, a common range on many PBXs and SBCs.</p>
+      <div class="callout info">
+        <strong class="label">Important</strong>
+        This range <strong>only affects RTP/RTCP</strong>. SIP signaling is searched for across <em>all</em> UDP traffic in the trace regardless of what you set here, since signaling and media conventionally use different ports (see <a href="#s2-5">2.5</a>).
+      </div>
+      <p>A UDP packet is considered "within range" if its <strong>source or destination</strong> port falls in the interval — it doesn't need to be both, since in many captures only one direction is clearly visible, or the port range differs slightly between endpoints.</p>
+
+      <h3 id="s1-3">1.3 Sample trace</h3>
+      <p>The <span class="kbd">Load sample trace</span> button loads a synthetic capture bundled with the app itself (it never leaves your browser, it's embedded as base64 inside the HTML file), with two RTP calls, RTCP reports, a packet loss event, a jitter spike, and a simulated clock drift — useful for seeing every feature in action without needing to upload anything of your own.</p>
+
+      <h3 id="s1-4">1.4 Status messages</h3>
+      <p>After analyzing, a green or red message appears with a summary: total frames read, UDP packets within range, how many were classified as RTP/RTCP, how many SIP messages and dialogs were found, and how many flows/calls were detected in total. If any RTCP SSRC was discarded as likely noise (see <a href="#s6">section 6</a>), that's noted here too.</p>
+      <div class="callout warn">
+        <strong class="label">If nothing is detected</strong>
+        The error message will tell you how many UDP packets were in range versus the trace's total. If it's 0, it's almost always because the port range doesn't match what that call actually uses — widen it (e.g. to <code>0</code>–<code>65535</code>) and try again to locate it.
+      </div>
+    </section>
+
+    <section id="s2">
+      <h2><span class="section-num">2</span>What the Engine Does Internally</h2>
+      <p>This section explains, step by step, everything that happens between clicking "Analyze" and the results appearing. It helps you understand why the app classifies things the way it does, and what to do if a particular file doesn't behave as expected.</p>
+
+      <h3 id="s2-1">2.1 Reading the container</h3>
+      <p>The file is read entirely into memory as an <code>ArrayBuffer</code> and walked frame by frame, extracting from each one its real capture timestamp (in seconds, at microsecond precision or better) and its raw bytes.</p>
+
+      <h3 id="s2-2">2.2 From Ethernet to UDP</h3>
+      <p>For each frame, the link-layer header is skipped (Ethernet/SLL/raw IP), the IP version is checked to be 4 and the protocol UDP (17), and the source IP, destination IP, source port, destination port, and UDP payload are extracted. Anything that isn't IPv4+UDP is silently dropped at this step.</p>
+
+      <h3 id="s2-3">2.3 RTP vs RTCP</h3>
+      <p>Every UDP payload within the port range is classified with the same heuristic Wireshark's dynamic dissectors use:</p>
+      <table class="ref">
+        <tr><th>Condition</th><th>Classification</th></tr>
+        <tr><td>Version (top 2 bits of the first byte) ≠ 2</td><td>None — ignored</td></tr>
+        <tr><td>Version = 2 and second byte between 192 and 223</td><td><span class="tag rtcp">RTCP</span> (SR / RR / SDES / BYE / APP)</td></tr>
+        <tr><td>Version = 2, not RTCP, and at least 12 bytes</td><td><span class="tag rtp">RTP</span></td></tr>
+      </table>
+      <p>A decoded RTP packet provides: version, padding, extension, CSRC count, marker, payload type (PT), sequence number, RTP timestamp, and SSRC. An RTCP packet is decoded as a <em>compound packet</em> (it can carry several concatenated sub-packets: e.g. an SR followed by an SDES), and from each reception report block the source SSRC, fraction lost, cumulative loss, highest sequence received, jitter, and (if it's an SR) the sender's own sending stats are extracted.</p>
+
+      <h3 id="s2-4">2.4 Grouping into flows</h3>
+      <p>Each RTP packet is grouped into a flow identified by the tuple <code>source IP:port → destination IP:port | SSRC</code>. This means a normal bidirectional call produces <strong>two flows</strong> (one per direction), each with its own SSRC — the same convention Wireshark uses in its "RTP Streams".</p>
+      <p>RTCP reports are matched to a flow by the "source SSRC" field of each report block — i.e. by who the report describes, not by which port it arrived on. This is more robust than assuming the "RTP port + 1" convention, which doesn't always hold.</p>
+
+      <h3 id="s2-5">2.5 SIP signaling and SDP</h3>
+      <p>Regardless of the configured port range, the app scans <em>all</em> UDP traffic for SIP messages: any payload starting with a method (<code>INVITE</code>, <code>ACK</code>, <code>BYE</code>, <code>CANCEL</code>, <code>OPTIONS</code>, <code>REGISTER</code>, <code>PRACK</code>, <code>SUBSCRIBE</code>, <code>NOTIFY</code>, <code>REFER</code>, <code>MESSAGE</code>, <code>UPDATE</code>, <code>INFO</code>, <code>PUBLISH</code>) or a response line <code>SIP/2.0 &lt;code&gt;</code>.</p>
+      <p>From each message its headers are extracted (including compact forms: <code>i</code>=Call-ID, <code>f</code>=From, <code>t</code>=To, <code>m</code>=Contact, <code>v</code>=Via, <code>l</code>=Content-Length, <code>c</code>=Content-Type), and if the body is SDP, it's parsed looking for <code>m=audio &lt;port&gt; ...</code> lines and <code>a=rtpmap:&lt;PT&gt; &lt;codec&gt;/&lt;rate&gt;</code> lines.</p>
+      <p>All messages with the same Call-ID are grouped into a <strong>dialog</strong>. A dialog with at least one <code>INVITE</code> is treated as a real call; the rest (typically repeated <code>OPTIONS</code>) are treated as health-check traffic between network elements and summarized in a single line instead of listed one by one.</p>
+      <p>This information builds two internal maps that feed the rest of the app:</p>
+      <ul>
+        <li><strong>Negotiated port/IP → codec and rate</strong>, to know the real clock rate of a dynamic flow (see 2.6).</li>
+        <li><strong>Negotiated port/IP → Call-ID</strong>, to link each RTP flow back to the SIP dialog that originated it (see <a href="#s3">section 3</a>).</li>
+      </ul>
+      <div class="callout info">
+        <strong class="label">SIP over TCP too</strong>
+        Many real deployments (for example Microsoft Teams Direct Routing / PSTN hub, or any SIP trunk configured for TCP or TLS transport) carry signaling over TCP instead of UDP. The app also analyzes the trace's TCP traffic: it reassembles each connection into a single byte stream ordered by sequence number (discarding retransmissions), and extracts complete SIP messages from it using the <code>Content-Length</code> header to know exactly where each one ends — necessary because in TCP a single message can be split across several packets, or several messages can arrive glued together in one. <strong>Encrypted</strong> SIP traffic (TLS/SIPS) can't be interpreted, since there's no decryption key available.
+      </div>
+
+      <h3 id="s2-6">2.6 Clock rate</h3>
+      <p>Calculating jitter, skew, and clock drift from RTP timestamps requires knowing the codec's sampling frequency — a value that <strong>doesn't</strong> travel in every RTP packet, it's only negotiated once in signaling. The app determines it with this priority, from most to least reliable:</p>
+      <ol>
+        <li><strong>Negotiated SDP</strong> — if there's SIP signaling and its SDP explicitly declared that payload type with <code>a=rtpmap</code>, that frequency is used. It's the only 100% reliable source, since it's what was actually agreed for that specific call.</li>
+        <li><strong>Static payload type (RFC 3551)</strong> — if there's no SDP but the PT is one defined by the standard (0=PCMU/8000, 8=PCMA/8000, 18=G.729/8000, etc.), the standard's fixed frequency is used.</li>
+        <li><strong>Automatic estimation</strong> — for dynamic types (96–127) with no SDP, how much the RTP timestamp advances is compared against the real arrival interval, picking the common frequency (8000/16000/32000/44100/48000/90000 Hz) that best fits the observed pattern. This correctly detects cases like <strong>Opus</strong>, whose RTP always uses 48000 Hz even when the audio is in narrowband mode.</li>
+        <li><strong>Manual</strong> — if none of the above matches reality, you can force it yourself from the selector in the detail view (see <a href="#s5-2">5.2</a>).</li>
+      </ol>
+      <div class="callout warn">
+        <strong class="label">Why this matters</strong>
+        Using the wrong clock rate doesn't give you a "slightly different" jitter: it wrecks it completely. We've seen real cases where assuming 8000 Hz on a flow that was actually Opus at 48000 Hz produced a calculated jitter of ~99 ms when the real one was 0.08 ms — a factor of more than 1000×. If you ever see a jitter that doesn't make sense, check first what clock rate is being used.
+      </div>
+    </section>
+
+    <section id="s3">
+      <h2><span class="section-num">3</span>The "SIP Signaling" Section</h2>
+      <p>Appears automatically above the calls table <strong>only if the trace contains SIP traffic</strong> — if there's none, the section stays hidden and doesn't get in the way.</p>
+      <p>It shows a summary ("N SIP message(s) · M dialog(s) — X call(s) with INVITE, Y check/registration exchanges") and, for each real call, a card <strong>collapsed by default</strong> showing only the first line:</p>
+      <div class="flow-diagram">
+        <strong>A:</strong> 10.10.82.60:5071 (sip:34999991538@10.10.64.24) &nbsp; <strong>B:</strong> 10.10.64.24:5062 (sip:5350@10.10.64.24)<br>
+        Call-ID: ddb7c66ed91c4e80b5fe0fcb128adf28 · 113.9 s · 27 messages
+      </div>
+      <p>Clicking that header expands the full detail: each message in the dialog with an arrow showing who sent it (<code>──→</code> or <code>←──</code>, calculated from the real IP, not order of appearance), the exact IPs of that hop, and — if that particular message carried SDP — a summary of the codecs it offers right below, in purple, next to a <strong>"View full SDP ▸"</strong> button that expands the complete SDP body exactly as it came in the packet (every <code>v=</code>, <code>o=</code>, <code>s=</code>, <code>c=</code>, <code>t=</code>, <code>m=</code> line and any <code>a=</code> attribute, not just the codecs). At the end of the call, every codec seen anywhere in the dialog is summarized.</p>
+      <p>Response codes are color-coded by type: <span class="chip warn">1xx</span> provisional, <span class="chip good">2xx</span> success, <span class="chip bad">3–6xx</span> redirect/error.</p>
+      <h4>Link to RTP flows</h4>
+      <p>Whether collapsed or expanded, every call card shows a <strong>"🔊 RTP flow(s) for this call"</strong> button with a chip per associated flow. Clicking it takes you straight to that flow's detail. The link is bidirectional: in a flow's detail view, if it could be matched to a SIP call, a <strong>"📞 Associated SIP call"</strong> note appears with the From/To and matching Call-ID.</p>
+    </section>
+
+    <section id="s4">
+      <h2><span class="section-num">4</span>Detected Calls Table</h2>
+      <p>This is the main view after analyzing a trace: one row per detected RTP flow (or "RTCP only" pseudo-flow, see <a href="#s6">section 6</a>), with its most important metrics laid out in columns for at-a-glance comparison.</p>
+
+      <h3 id="s4-1">4.1 Table columns</h3>
+      <table class="ref">
+        <tr><th>Column</th><th>Source</th><th>What it shows</th></tr>
+        <tr><td>Call / flow</td><td>—</td><td>Call N-Flow X label (see 4.2) + IP:port → IP:port (PT, SSRC)</td></tr>
+        <tr><td>Duration</td><td><span class="tag rtp">RTP</span></td><td>Sum of the intervals between captured packets</td></tr>
+        <tr><td>Estimated MOS</td><td><span class="tag rtp">RTP</span></td><td>Heuristic from jitter and loss calculated from the packets (see 8)</td></tr>
+        <tr><td>Min / avg / max jitter</td><td><span class="tag rtp">RTP</span></td><td>RFC 3550 jitter estimator over the captured packets</td></tr>
+        <tr><td>Packet loss</td><td><span class="tag rtp">RTP</span></td><td>% of gaps in the RTP sequence number</td></tr>
+        <tr><td>Average bandwidth</td><td><span class="tag rtp">RTP</span></td><td>Median of the instantaneous per-packet bitrate (robust to one-off bursts)</td></tr>
+        <tr><td>Nominal BW (RTP)</td><td><span class="tag rtp">RTP</span></td><td>Bitrate calculated only from the RTP timestamp and total bytes — immune to capture artifacts (see 5.7)</td></tr>
+        <tr><td>Avg / max cadence (delta)</td><td><span class="tag rtp">RTP</span></td><td>Real interval between consecutive packets</td></tr>
+        <tr><td>Max skew</td><td><span class="tag rtp">RTP</span></td><td>Maximum cumulative displacement between real and expected arrival</td></tr>
+        <tr><td>MOS / min-avg-max jitter / loss <strong>(RTCP)</strong></td><td><span class="tag rtcp">RTCP</span></td><td>The same concepts, but calculated exclusively from what the receiver reports over RTCP — to cross-check against the RTP columns. Shows "–" if that flow has no RTCP report.</td></tr>
+      </table>
+      <p>Every numeric cell carries a colored <em>chip</em> (green / amber / red) based on rough thresholds — explained in the <a href="#s8">methodology</a> section. The table has its own horizontal scroll if it doesn't fit the screen.</p>
+
+      <h3 id="s4-2">4.2 "Call N-Flow X" labels</h3>
+      <p>When it can be established that two (or more) flows belong to the same call, they're labeled together as <strong>Call 1-Flow A</strong> and <strong>Call 1-Flow B</strong> instead of as independent entries. This can be determined two ways:</p>
+      <ol>
+        <li><strong>Via SIP signaling</strong> — if there's a SIP dialog that negotiated that flow (see section 3).</li>
+        <li><strong>Via IP correlation in RTCP</strong>, with no SIP needed — every RTCP report records both who sends it and who it's sent to. If flow A is reported by IP P (sent to IP Q), and flow B is reported by IP Q (sent to IP P), that's the classic signature of a bidirectional call between P and Q, and both flows are grouped automatically even without a single SIP packet in the trace.</li>
+      </ol>
+      <p>Flows that can't be correlated either way are simply numbered <strong>Flow 1</strong>, <strong>Flow 2</strong>... (instead of "Call N", so as not to imply a grouping that couldn't be confirmed). This same numbering is used in the tabs, the CSV, and the exported report.</p>
+
+      <h3 id="s4-3">4.3 Filters</h3>
+      <p>Above the table there's a filter panel with:</p>
+      <ul>
+        <li><strong>Source IP / port</strong> and <strong>destination IP / port</strong>, as two independent text fields — so you can isolate one specific direction of a bidirectional call without the filter returning both directions just because they share the same two IPs.</li>
+        <li><strong>Min/max range</strong> for every numeric metric (MOS, jitter, loss, bandwidth, cadence, skew) — you can leave just the minimum, just the maximum, or both.</li>
+      </ul>
+      <p>Filtering is live (no "search" button), shows a "Showing X of Y calls" counter when any filter is active, and a <strong>Clear filters</strong> button resets everything at once. Filters reset automatically when a new file is loaded.</p>
+      <div class="callout info">
+        <strong class="label">Note on exporting</strong>
+        Filters only affect what you see on screen. Both the CSV and the exported HTML report always include <strong>every</strong> detected call, filtered or not.
+      </div>
+    </section>
+
+    <section id="s5">
+      <h2><span class="section-num">5</span>Flow Detail View</h2>
+      <p>Opens by clicking a table row or a flow tab. Contains the full breakdown of that specific flow.</p>
+
+      <h3 id="s5-1">5.1 RTP gauges</h3>
+      <p>Seven cards with the main metrics, calculated from the captured RTP packets:</p>
+      <div>
+        <div class="gauge-demo"><div class="gl">Estimated MOS</div><div class="gv">4.16</div></div>
+        <div class="gauge-demo"><div class="gl">Average jitter</div><div class="gv">1.88<span> ms</span></div></div>
+        <div class="gauge-demo"><div class="gl">Packet loss</div><div class="gv">0.78<span> %</span></div></div>
+        <div class="gauge-demo"><div class="gl">Average bandwidth</div><div class="gv">85.6<span> kbps</span></div></div>
+        <div class="gauge-demo"><div class="gl">Cadence (delta)</div><div class="gv">20.0<span> ms</span></div></div>
+        <div class="gauge-demo"><div class="gl">Clock drift (skew)</div><div class="gv">19.3<span> ms</span></div></div>
+        <div class="gauge-demo"><div class="gl">Freq. Drift</div><div class="gv">195.6<span> ppm</span></div></div>
+      </div>
+      <p style="margin-top:14px;">The average jitter gauge also notes the observed minimum and maximum; the bandwidth one notes the nominal bandwidth (see 4.1) when available, or the min–max range otherwise.</p>
+      <div class="callout warn">
+        <strong class="label">Clock drift and Freq. Drift</strong>
+        These two gauges show "· no sustained drift confirmed" when skew swings (sometimes quite a bit) but <strong>not</strong> in a sustained way through to the end of the call — typical of an isolated network hiccup, not a real desynchronized clock. The notice appears whenever the internal sustained-drift check (which requires a minimum net displacement) isn't confirmed, even if the ppm itself looks high. Always cross-check against the skew chart (5.5) before trusting the ppm: if skew returns close to 0 by the end, it's an isolated hiccup; if it keeps growing to the end, it's real drift.
+      </div>
+
+      <h3 id="s5-2">5.2 Flow clock rate</h3>
+      <p>Right below the gauges, a card shows the clock frequency used for this flow and where it came from, color-coded by confidence:</p>
+      <table class="ref">
+        <tr><th>Color</th><th>Source</th></tr>
+        <tr><td><span class="chip good">Green</span></td><td>Taken from the SDP negotiated in SIP signaling — includes the codec name</td></tr>
+        <tr><td>Gray</td><td>Static payload type (RFC 3551) or manually adjusted by you</td></tr>
+        <tr><td><span class="chip warn">Amber</span></td><td>Dynamic type with no SDP available: estimated automatically by comparing RTP timestamp against real arrival</td></tr>
+      </table>
+      <p>The dropdown next to it lets you manually force 8000 / 16000 / 32000 / 44100 / 48000 / 90000 Hz — changing it recalculates <strong>every</strong> metric for that flow (jitter, skew, drift, charts) instantly with the new rate.</p>
+
+      <h3 id="s5-3">5.3 RTCP summary</h3>
+      <p>If the flow has any associated RTCP report, this card appears with two blocks:</p>
+      <h4>Sender self-check</h4>
+      <p>If any SR report had the sender declare how many packets and bytes it has sent in total, that's compared against what was actually captured here for that same flow. If the two numbers are the same order of magnitude, it's shown in green; if the gap is enormous, in red with a warning — this can happen if RTCP is encrypted (SRTCP, see 5.7), if the counter belongs to a previous session that wasn't reset, or if the packet is corrupt.</p>
+      <h4>Reception reports</h4>
+      <p>Makes it clear, in one sentence, that this data is reported by <strong>whoever receives</strong> the flow, not whoever sends it. If more than one receiver is reporting on the same SSRC, they're broken out separately (one per receiver) instead of mixing their figures into a single average. It also clarifies that "SR" and "RR" don't indicate whose flow it is, but whether whoever is reporting was sending RTP at that moment (SR) or only receiving (RR).</p>
+      <div class="callout rtcp">
+        <strong class="label">RTCP jitter units</strong>
+        RTCP's jitter field <strong>isn't in milliseconds</strong>: it's in the same units as the codec's RTP timestamp (RFC 3550 §6.4.1). The app already does the conversion (<code>ticks ÷ clock_rate × 1000</code>) using that flow's real clock rate — if you see the raw value in another tool without conversion, it will look much higher than it really is.
+      </div>
+      <p>When the app can't match any RTCP report to a flow but detects that the other end did send RTCP-shaped packets, it checks whether the SSRC those packets declare changes erratically from one to the next — if so, it warns that it's likely <strong>encrypted RTCP (SRTCP)</strong> that can't be interpreted, instead of just saying "no reports".</p>
+
+      <h3 id="s5-4">5.4 RTCP gauges</h3>
+      <p>Right below the summary, two additional cards in the same style as 5.1 but calculated only from RTCP: <strong>Average jitter (RTCP)</strong> and <strong>Packet loss (RTCP)</strong>. They only appear when the flow has both RTP <em>and</em> RTCP (in an "RTCP only" flow this information is already what the main gauges show, so it isn't duplicated).</p>
+
+      <h3 id="s5-5">5.5 RTP charts</h3>
+      <p>Six time-series charts, in this order:</p>
+      <ol>
+        <li><strong>Jitter (ms) per packet</strong></li>
+        <li><strong>Packet loss (%) per bucket</strong> — right below the jitter one</li>
+        <li><strong>Inter-packet interval — Delta (ms)</strong></li>
+        <li><strong>Bandwidth (kbps)</strong></li>
+        <li><strong>Skew (ms) — cumulative drift</strong>, with its text explanation right below (see 5.7)</li>
+        <li><strong>Estimated MOS per bucket</strong> — the same MOS formula applied to segments of the flow, to see if quality drops at any specific point in the call</li>
+      </ol>
+      <p>The <strong>X axis shows the real elapsed seconds of the call</strong>, and hovering over any point also shows the exact RTP sequence number for that instant in the tooltip. When a flow has many packets, data is grouped into buckets (up to 160 points) averaging each bucket, so the chart stays legible — noted with "averaged per bucket" in each chart's header.</p>
+
+      <h3 id="s5-6">5.6 RTCP charts</h3>
+      <p>Two additional charts, tagged <span class="tag rtcp">RTCP</span>, showing <strong>Reported jitter (ms)</strong> and <strong>Reported loss (%)</strong> exactly as each RTCP report declared them over the call — with real points marked (not interpolated) since RTCP reports usually arrive every few seconds, not packet by packet. If more than one receiver is reporting on the same flow, each one is drawn in a different color with a legend.</p>
+
+      <h3 id="s5-7">5.7 Capture artifact detection</h3>
+      <p>An amber notice can appear under the jitter chart when <strong>all</strong> of these conditions hold at once:</p>
+      <ol>
+        <li>The calculated average jitter is significant (≥ 2 ms).</li>
+        <li>Inter-packet intervals are <strong>bimodal</strong>: they cluster into two well-separated groups (e.g. many around 15 ms and many others around 31 ms) instead of spreading continuously around the nominal value.</li>
+        <li>The <strong>sender's own RTP timestamp</strong> advances perfectly evenly (≥95% of intervals are identical) — meaning the sender transmitted with no real issue.</li>
+      </ol>
+      <p>When all three hold, the irregularity wasn't generated by the sender nor experienced by the call over the network: it was introduced <strong>between the sender and the capture point</strong> — packet batching while capturing, network interrupt coalescing, virtualization... If the trace is a <code>.pcapng</code> and its interface metadata mentions a known virtual adapter (vmxnet, virtio, Hyper-V, VMware, Xen, VirtualBox, QEMU, Parallels), the app confirms this explicitly, quoting the exact interface name.</p>
+      <p>In these cases, the notice also includes the <strong>nominal bandwidth</strong> (calculated only from the RTP timestamp, immune to this artifact) as a more representative figure than the observed "average bandwidth", which does get inflated by the artifact itself.</p>
+
+      <h3 id="s5-8">5.8 Anomaly log</h3>
+      <p>Table with one-off events detected in the flow:</p>
+      <table class="ref">
+        <tr><th>Type</th><th>Severity</th><th>When it appears</th></tr>
+        <tr><td>Packets lost</td><td><span class="chip bad">Critical</span></td><td>Real gap in the RTP sequence number</td></tr>
+        <tr><td>Possible reordering</td><td><span class="chip warn">Attention</span></td><td>A packet arrives with a sequence number equal to or lower than the previous one</td></tr>
+        <tr><td>Jitter spike</td><td><span class="chip warn">Attention</span></td><td>One-off jitter &gt; 4× the flow's median</td></tr>
+        <tr><td>Cadence cut</td><td><span class="chip warn">Attention</span></td><td>One-off delta &gt; 4× the flow's median</td></tr>
+        <tr><td>Clock drift</td><td><span class="chip warn">Attention</span></td><td>Skew with a sustained net displacement (see 8)</td></tr>
+      </table>
+      <p>If there's nothing to report, a green confirmation message is shown instead of an empty table.</p>
+    </section>
+
+    <section id="s6">
+      <h2><span class="section-num">6</span>Flujos "solo RTCP"</h2>
+      <p>Si un SSRC aparece mencionado en varios informes RTCP pero nunca se capturó ningún paquete RTP suyo (por ejemplo, porque el RTP real usa un puerto fuera del rango indicado, la ruta es asimétrica, o esos paquetes se perdieron en la propia captura), la aplicación no descarta esa información: crea un pseudo-flujo etiquetado <span class="tag rtcp">solo RTCP</span> basado exclusivamente en lo que dicen esos informes.</p>
+      <p>Estos flujos se comportan de forma distinta al resto:</p>
+      <ul>
+        <li>Su identificador muestra directamente <strong>la IP y puerto de quien envía el informe</strong> (ej. <code>SSRC 0x1234 · RTCP de 10.0.0.2:30001</code>), en vez de un origen/destino RTP que nunca se llegó a ver.</li>
+        <li>Solo se muestran <strong>tres medidores</strong> (MOS, Jitter, Pérdida) — los únicos calculables sin paquetes reales.</li>
+        <li><strong>No hay gráficas ni registro de anomalías</strong> (no existen datos paquete a paquete que representar); en su lugar aparece un aviso explicando la situación, incluyendo la IP que informa.</li>
+        <li>En la tabla y el CSV, las columnas que dependen de paquetes RTP (ancho de banda, cadencia, skew) muestran <code>–</code> / <code>N/D</code> en vez de un valor.</li>
+        <li>Si se puede correlacionar con otro flujo "solo RTCP" de la misma llamada bidireccional (ver 4.2), ambos se agrupan como <strong>Llamada N-Flujo A/B</strong>.</li>
+      </ul>
+      <div class="callout info">
+        <strong class="label">Filtro de ruido</strong>
+        Un SSRC con un único informe RTCP suelto (que nunca se repite) no se convierte en un pseudo-flujo — se descarta como probable ruido o RTCP cifrado no interpretable, cuyo síntoma típico es precisamente generar un "SSRC" distinto y aparentemente aleatorio en cada paquete. Se exige un mínimo de 2 informes del mismo SSRC para considerarlo una llamada real. Si se descarta alguno, se indica cuántos en el mensaje de estado tras analizar.
+      </div>
+    </section>
+
+    <section id="s7">
+      <h2><span class="section-num">7</span>Exportar resultados</h2>
+
+      <h3 id="s7-1">7.1 Exportar CSV</h3>
+      <p>Descarga una fila por cada llamada/flujo con <strong>todas</strong> las métricas calculadas: duración, diagnóstico, MOS, jitter (mín/medio/máx), pérdida, ancho de banda (medio/mín/máx/nominal), cadencia, skew, deriva de reloj y ppm, picos detectados, y las cinco columnas equivalentes calculadas desde RTCP. El fichero se codifica en UTF-8 con BOM para que Excel muestre bien los acentos.</p>
+
+      <h3 id="s7-2">7.2 Exportar informe HTML</h3>
+      <p>Genera un documento HTML <strong>estático y autocontenido</strong> (sin JavaScript de interacción, para poder archivarlo o enviarlo por correo) con:</p>
+      <ul>
+        <li>La sección de señalización SIP, ya desplegada por completo (sin necesidad de clic, porque un documento estático no puede recibir clics).</li>
+        <li>La tabla comparativa completa, sin aplicar los filtros que tuvieras puestos en pantalla.</li>
+        <li>Para cada llamada: medidores, resumen RTCP, medidores RTCP, gráficas RTP y RTCP (capturadas como imágenes PNG, no como gráficos interactivos) y registro de anomalías.</li>
+      </ul>
+      <p>Todo el proceso — parseo, cálculo y generación de las imágenes — ocurre en tu navegador; nada se sube a ningún servidor.</p>
+    </section>
+
+    <section id="s8">
+      <h2><span class="section-num">8</span>Metodología y fórmulas</h2>
+      <p>Un resumen de cómo se calcula cada cosa. La aplicación incluye también esta información en su propia sección de "Metodología", siempre visible al final de la página.</p>
+
+      <h4>Jitter (RFC 3550)</h4>
+      <p>Para cada paquete <code>i</code> se calcula la diferencia <code>D</code> entre el intervalo de llegada real y el esperado según el timestamp RTP:</p>
+      <pre>D(i) = (llegada[i] - llegada[i-1]) - (timestampRTP[i] - timestampRTP[i-1]) / tasaDeReloj
+J(i) = J(i-1) + (|D(i)| - J(i-1)) / 16</pre>
+      <p><code>J</code> es una media móvil exponencial — el jitter mostrado en toda la aplicación. El mínimo excluye el primer paquete (no tiene jitter calculable, no hay uno anterior con el que comparar).</p>
+
+      <h4>Skew</h4>
+      <p>La misma <code>D(i)</code>, pero acumulada sin suavizar: <code>skew(i) = skew(i-1) + D(i)</code>. Revela deriva sostenida porque no "olvida" el pasado como sí hace el jitter suavizado.</p>
+
+      <h4>Deriva de reloj y Freq. Drift</h4>
+      <p>Se ajusta una recta de regresión al skew de todo el flujo. Si la pendiente es significativa <em>y</em> el desplazamiento acumulado total supera ~20 ms, se marca como deriva sostenida (<code>driftDetected</code>). El ppm se calcula como:</p>
+      <pre>ppm = (pendiente del skew por paquete ÷ intervalo de paquetización) × 10⁶</pre>
+      <p>No es un estándar cerrado de la ITU-T, es una guía de ingeniería — y, como se explica en 5.1, puede salir alto sin que haya deriva real si el skew tuvo un rebrote puntual en algún punto de la llamada.</p>
+
+      <h4>Pérdida de paquetes</h4>
+      <p>Huecos en el número de secuencia RTP, con reconstrucción de los ciclos de 16 bits para llamadas largas (más de 65.536 paquetes).</p>
+
+      <h4>Ancho de banda</h4>
+      <p>Por paquete: tamaño de trama × 8 ÷ intervalo de llegada, con un suelo mínimo de 2 ms en el intervalo (para que dos paquetes casi simultáneos no disparen el valor a cifras absurdas). El "ancho de banda medio" mostrado es la <strong>mediana</strong> de esos valores, no la media aritmética — mucho más resistente a que un puñado de picos puntuales distorsionen el número representativo de toda la llamada. El "ancho de banda nominal (RTP)" es distinto: bytes totales enviados ÷ duración real según el timestamp RTP del emisor, sin depender en absoluto de la hora de llegada — por eso es inmune a los artefactos de captura de la sección 5.7.</p>
+
+      <h4>MOS estimado</h4>
+      <pre>MOS = 4.5 − mín(jitter_medio ÷ 10, 1.5) − pérdida% × 0.2</pre>
+      <p>Heurística simplificada, <strong>no</strong> es el modelo E completo de la ITU-T (que exige latencia extremo a extremo real, no disponible en un pcap sin más contexto). Es una guía orientativa, útil para comparar flujos entre sí, no un valor certificable.</p>
+
+      <h4>Umbrales de color usados en toda la aplicación</h4>
+      <table class="ref">
+        <tr><th>Métrica</th><th><span class="chip good">Verde</span></th><th><span class="chip warn">Ámbar</span></th><th><span class="chip bad">Rojo</span></th></tr>
+        <tr><td>Jitter</td><td>&lt; 20 ms</td><td>20–50 ms</td><td>&gt; 50 ms</td></tr>
+        <tr><td>Pérdida de paquetes</td><td>&lt; 0,5%</td><td>0,5–3%</td><td>&gt; 3%</td></tr>
+        <tr><td>MOS</td><td>≥ 4</td><td>3–4</td><td>&lt; 3</td></tr>
+        <tr><td>Deriva de reloj (skew)</td><td>&lt; 20 ms</td><td>20–100 ms</td><td>&gt; 100 ms</td></tr>
+        <tr><td>Freq. Drift</td><td>&lt; 50 ppm</td><td>50–150 ppm</td><td>&gt; 150 ppm</td></tr>
+      </table>
+    </section>
+
+    <section id="s9">
+      <h2><span class="section-num">9</span>Limitaciones conocidas</h2>
+      <ul>
+        <li><strong>Solo IPv4.</strong> No se decodifica IPv6. RTP y RTCP en sí solo se analizan sobre UDP (el estándar casi universal para medio); la señalización SIP sí se analiza tanto sobre UDP como sobre TCP, pero no si va cifrada por TLS.</li>
+        <li><strong>RTCP cifrado (SRTCP) no se puede interpretar.</strong> La aplicación lo detecta y avisa, pero no puede descifrarlo sin la clave — que nunca está en un pcap normal.</li>
+        <li><strong>El MOS es una heurística</strong>, no el modelo E de la ITU-T. No lo uses como valor contractual o certificable.</li>
+        <li><strong>La estimación automática de tasa de reloj</strong> puede fallar si la llamada tiene muy pocos paquetes o un patrón de envío muy irregular — el SDP, cuando está disponible, siempre es más fiable.</li>
+        <li><strong>No hay cálculo de RTT</strong> (round-trip time) a partir de RTCP en esta versión — requeriría pares SR/RR completos en ambos sentidos, con una lógica adicional no implementada todavía.</li>
+        <li><strong>Ficheros muy grandes</strong> pueden tardar varios segundos en analizarse, al ejecutarse todo en el propio navegador sin backend.</li>
+      </ul>
+    </section>
+
+    <section id="s10">
+      <h2><span class="section-num">10</span>Preguntas frecuentes</h2>
+
+      <h4>La aplicación me da un jitter/ancho de banda muy distinto al de Wireshark, ¿quién tiene razón?</h4>
+      <p>Depende del caso, pero casi siempre se reduce a la <strong>tasa de reloj</strong> (2.6). Si el flujo tiene un tipo de carga útil dinámico, Wireshark puede etiquetarlo con un códec por defecto (frecuentemente asumiendo 8000 Hz) sin que eso sea necesariamente correcto. Comprueba en la tarjeta de tasa de reloj (5.2) qué frecuencia está usando esta aplicación y por qué, y compárala con la real del códec.</p>
+
+      <h4>El "Freq. Drift" me sale altísimo pero la llamada suena bien, ¿es un error?</h4>
+      <p>No necesariamente — mira si el medidor incluye el aviso "sin deriva sostenida confirmada" (5.1) y consulta la gráfica de skew (5.5): si el skew sube de golpe y luego se recupera, es un rebrote de red puntual, no una deriva de reloj real. Dos flujos de la misma llamada bidireccional pueden dar ppm muy distintos entre sí sin que eso sea un problema, porque cada dirección la genera un dispositivo distinto con su propio reloj.</p>
+
+      <h4>¿Por qué mi llamada aparece con jitter/pérdida altísimos en un pcapng capturado en una VM?</h4>
+      <p>Revisa el aviso de artefacto de captura (5.7). Adaptadores virtuales (VMware vmxnet3, virtio, Hyper-V...) suelen agrupar paquetes al entregarlos a la captura, generando un patrón de llegada bimodal que no refleja lo que pasó realmente en la red.</p>
+
+      <h4>¿Por qué no aparece la sección de Señalización SIP?</h4>
+      <p>Porque no se ha detectado ningún mensaje SIP en la traza. Recuerda que la búsqueda de SIP no depende del rango de puertos que configures para RTP, y que sí se busca tanto en UDP como en TCP (ver 2.5). Si sabes con certeza que la traza lleva SIP y aun así no aparece, la explicación más probable es que vaya <strong>cifrado por TLS</strong> (SIPS) — en ese caso no hay forma de leerlo sin la clave de descifrado, esté donde esté.</p>
+
+      <h4>¿Mis datos salen de mi navegador en algún momento?</h4>
+      <p>No. Todo el análisis — parseo del pcap, cálculos, gráficas y generación de exportaciones — se ejecuta en el propio navegador con JavaScript. La única petición de red que hace la página es cargar la librería de gráficos (Chart.js) desde una CDN pública; el pcap en sí nunca se envía a ningún sitio.</p>
+    </section>
+
+  </main>
+</div>
+
+<a href="#intro" class="toc-back">↑ Volver arriba</a>
+
+<script>
+  document.querySelectorAll('.toc a').forEach(a=>{
+    a.addEventListener('click', (e)=>{
+      const id = a.getAttribute('href');
+      const target = document.querySelector(id);
+      if(target){
+        e.preventDefault();
+        target.scrollIntoView({behavior:'smooth', block:'start'});
+      }
+    });
+  });
+</script>
+</body>
+</html>
